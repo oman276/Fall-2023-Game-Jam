@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -17,6 +18,10 @@ public class PlayerMovement : MonoBehaviour
     public GameObject laser;
     public GameObject fire;
 
+    public Slider healthSlider;
+    public float health = 100f;
+    public float healthRegenSpeed = 5f;
+
     public enum FireState { 
         None,
         Bullet,
@@ -29,6 +34,9 @@ public class PlayerMovement : MonoBehaviour
     void Start()
     {
         body = GetComponent<Rigidbody2D>();
+        healthSlider.minValue = 0f;
+        healthSlider.maxValue = health;
+        healthSlider.value = health;
     }
 
     void Update()
@@ -36,6 +44,28 @@ public class PlayerMovement : MonoBehaviour
         // Gives a value between -1 and 1
         horizontal = Input.GetAxisRaw("Horizontal"); // -1 is left
         vertical = Input.GetAxisRaw("Vertical"); // -1 is down
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector3 direction = mousePosition - this.transform.position;
+
+            GameObject liveBullet = null;
+
+            if (currentState == FireState.Bullet) liveBullet = Instantiate(bullet, transform.position, Quaternion.identity);
+            else if (currentState == FireState.Laser) liveBullet = Instantiate(laser, transform.position, Quaternion.identity);
+            if (currentState == FireState.Fire) liveBullet = Instantiate(fire, transform.position, Quaternion.identity);
+
+            liveBullet.GetComponent<Rigidbody2D>().velocity = new Vector2(direction.x, direction.y).normalized * bulletSpeed;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space)) {
+            Damage(10f);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha1)) currentState = FireState.Bullet;
+        if (Input.GetKeyDown(KeyCode.Alpha2)) currentState = FireState.Laser;
+        if (Input.GetKeyDown(KeyCode.Alpha3)) currentState = FireState.Fire;
     }
 
     void FixedUpdate()
@@ -49,14 +79,15 @@ public class PlayerMovement : MonoBehaviour
 
         body.velocity = new Vector2(horizontal * runSpeed, vertical * runSpeed);
 
-        if (Input.GetMouseButtonDown(0)) {
-            Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            Vector3 direction = this.transform.position - mousePosition;
+        health += Time.deltaTime * healthRegenSpeed;
+        if (health >= 100) health = 100f;
+        healthSlider.value = health;
+    }
 
-            if (currentState == FireState.Bullet) {
-                GameObject liveBullet = Instantiate(bullet, transform.position, Quaternion.identity);
-                liveBullet.GetComponent<Rigidbody2D>().velocity = new Vector2(direction.x, direction.y).normalized * bulletSpeed;
-            }
+    void Damage(float damage) {
+        health -= damage;
+        if (health <= 0) {
+            Destroy(this.gameObject);
         }
     }
 }
